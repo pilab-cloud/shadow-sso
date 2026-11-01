@@ -1,5 +1,14 @@
 # Changelog
 
+## 0.3.0
+
+- Added automatic sign-in for the one-tap card (`autoSelect`, default 5s delay).
+- Added automatic sign-out state: `disableAutoSelect()`, `enableAutoSelect()`,
+  `isAutoSelectDisabled()`, with a `sso_auto_select` cookie.
+- Cancelling the one-tap card disables automatic sign-in for one day.
+- Added `stateCookieDomain` for sharing the sign-out state across subdomains.
+- Successful sign-in clears the disabled state.
+
 ## 0.2.0
 
 - Added `mountOneTap()` / `mountOneClick()`: a Google One Tap-style corner card

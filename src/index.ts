@@ -6,6 +6,12 @@ export type {
   OneTapPosition,
   OneTapTheme,
 } from "./one-tap.js";
+export {
+  disableAutoSelect,
+  enableAutoSelect,
+  isAutoSelectDisabled,
+} from "./auto-select.js";
+export type { AutoSelectStateOptions } from "./auto-select.js";
 export { buildSilentAuthorizeUrl } from "./url.js";
 export { preflightSilentAuthorize } from "./preflight.js";
 export { generatePkcePair } from "./pkce.js";

@@ -18,6 +18,7 @@ declarations.
 
 - Umbrella package for Shadow SSO JavaScript/TypeScript helpers
 - Google One Tap-style corner card (`mountOneTap`)
+- Automatic sign-in and sign-out state (`autoSelect`, `disableAutoSelect`)
 - Hidden iframe silent authentication (`prompt=none` semantics)
 - Strict `event.origin` and `state` validation
 - `postMessage` target derived from the registered redirect URI origin
@@ -143,9 +144,61 @@ One-tap options extend `SilentLoginOptions` with:
 | `zIndex` | Defaults to `2147483000` |
 | `target` | Mount element or selector; defaults to `document.body` |
 | `dismissible` | Defaults to `true` |
+| `autoSelect` | Automatically sign in after `autoSelectDelayMs`; defaults to `false` |
+| `autoSelectDelayMs` | Delay before automatic sign-in; defaults to `5000` |
+| `stateCookieDomain` | Cookie domain for the sign-out state, e.g. `.pilab.hu` |
 
 The initial check uses `mode=session` and does **not** create an authorization
-code. The code is generated only when the user clicks Continue.
+code. The code is generated only when the user clicks Continue or automatic
+sign-in fires.
+
+## Automatic sign-in and sign-out
+
+This mirrors Google One Tap without FedCM:
+
+- With `autoSelect: true`, the card is shown and, if the user does not dismiss
+  it within `autoSelectDelayMs` (default 5 seconds), the SDK obtains a code and
+  calls `onLogin` automatically.
+- Dismissing the card cancels automatic sign-in and disables it for one day.
+- On logout, call `disableAutoSelect()` before navigating away. This prevents an
+  automatic sign-in loop when the user returns to a One Tap page.
+- A successful manual or automatic sign-in clears the disabled state.
+
+```ts
+import {
+  disableAutoSelect,
+  mountOneTap,
+} from "@pilab/shadow-sso";
+
+const controller = mountOneTap({
+  issuer: "https://sso.pilab.hu",
+  clientId: "my-app",
+  redirectUri: "https://app.pilab.hu/auth/callback",
+  appName: "My App",
+  autoSelect: true,
+  autoSelectDelayMs: 5000,
+  stateCookieDomain: ".pilab.hu",
+  onLogin: async ({ code }) => {
+    await exchangeCodeAtBackend(code);
+  },
+});
+
+// On logout:
+function logout() {
+  disableAutoSelect({ domain: ".pilab.hu" });
+  window.location.href = "/logout";
+}
+```
+
+The disabled state is stored in a `sso_auto_select` cookie for one day. Set
+`stateCookieDomain` to your parent domain (for example `.pilab.hu`) when One Tap
+is used on multiple subdomains, otherwise each subdomain keeps its own state.
+
+`enableAutoSelect()` clears the state if you need to re-enable it manually.
+
+**Important:** automatic sign-in must be disabled when the user signs out,
+otherwise a post-logout One Tap page can sign them straight back in — the same
+dead-loop Google warns about.
 
 ## API
 
@@ -164,6 +217,20 @@ rejects with `SilentLoginError` (`login_required`, `consent_required`, …).
 ### `mountOneTap(options): OneTapController`
 
 Mounts the corner card. Returns `{ refresh, destroy }`.
+
+### `disableAutoSelect(options?)`
+
+Disables automatic sign-in for one day (or `options.days`). Use it on logout.
+`options.domain` shares the state across subdomains.
+
+### `enableAutoSelect(options?)`
+
+Clears the disabled state. The one-tap card calls this after a successful
+sign-in.
+
+### `isAutoSelectDisabled()`
+
+Returns whether automatic sign-in is currently disabled.
 
 ### `buildSilentAuthorizeUrl(options, mode?): SilentAuthorizeUrl`
 

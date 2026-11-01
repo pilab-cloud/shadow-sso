@@ -7,6 +7,8 @@ vi.mock("../src/silent-login.js", () => ({
 
 import {
   checkSilentSession,
+  disableAutoSelect,
+  isAutoSelectDisabled,
   mountOneTap,
   silentLogin,
   SilentLoginError,
@@ -36,12 +38,17 @@ function flush(): Promise<void> {
   return new Promise((resolve) => setTimeout(resolve, 0));
 }
 
+function sleep(ms: number): Promise<void> {
+  return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
 function widgetHost(): HTMLElement | null {
   return document.querySelector<HTMLElement>("[data-sso-one-tap]");
 }
 
 afterEach(() => {
   document.body.innerHTML = "";
+  document.cookie = "sso_auto_select=; Path=/; Max-Age=0";
   vi.clearAllMocks();
 });
 
@@ -139,5 +146,109 @@ describe("mountOneTap", () => {
     expect(widgetHost()).not.toBeNull();
     controller.destroy();
     expect(widgetHost()).toBeNull();
+  });
+
+  it("auto signs in after the delay when autoSelect is enabled", async () => {
+    checkMock.mockResolvedValue({
+      authenticated: true,
+      user: signedInUser,
+      state: "state-1",
+    });
+    loginMock.mockResolvedValue({
+      code: "code-auto",
+      state: "state-2",
+      user: signedInUser,
+    });
+    const onLogin = vi.fn();
+    const controller = mountOneTap({
+      ...baseOptions,
+      autoSelect: true,
+      autoSelectDelayMs: 10,
+      onLogin,
+    });
+    await flush();
+
+    expect(loginMock).not.toHaveBeenCalled();
+    await sleep(20);
+
+    expect(loginMock).toHaveBeenCalledTimes(1);
+    expect(onLogin).toHaveBeenCalledWith({
+      code: "code-auto",
+      state: "state-2",
+      user: signedInUser,
+    });
+
+    controller.destroy();
+  });
+
+  it("cancels auto sign-in on dismiss and disables it for later", async () => {
+    checkMock.mockResolvedValue({
+      authenticated: true,
+      user: signedInUser,
+      state: "state-1",
+    });
+    const onDismiss = vi.fn();
+    const controller = mountOneTap({
+      ...baseOptions,
+      autoSelect: true,
+      autoSelectDelayMs: 10,
+      onDismiss,
+    });
+    await flush();
+
+    const host = widgetHost();
+    host?.shadowRoot?.querySelector<HTMLButtonElement>("button.close")?.click();
+    await sleep(20);
+
+    expect(onDismiss).toHaveBeenCalledTimes(1);
+    expect(loginMock).not.toHaveBeenCalled();
+    expect(isAutoSelectDisabled()).toBe(true);
+
+    controller.destroy();
+  });
+
+  it("does not auto sign in when the disabled cookie is present", async () => {
+    disableAutoSelect();
+    checkMock.mockResolvedValue({
+      authenticated: true,
+      user: signedInUser,
+      state: "state-1",
+    });
+    const controller = mountOneTap({
+      ...baseOptions,
+      autoSelect: true,
+      autoSelectDelayMs: 10,
+    });
+    await flush();
+    await sleep(20);
+
+    expect(loginMock).not.toHaveBeenCalled();
+    expect(widgetHost()?.style.display).toBe("block");
+
+    controller.destroy();
+  });
+
+  it("clears the disabled state after a successful manual sign-in", async () => {
+    disableAutoSelect();
+    checkMock.mockResolvedValue({
+      authenticated: true,
+      user: signedInUser,
+      state: "state-1",
+    });
+    loginMock.mockResolvedValue({
+      code: "code-manual",
+      state: "state-2",
+      user: signedInUser,
+    });
+    const controller = mountOneTap(baseOptions);
+    await flush();
+
+    const button = widgetHost()?.shadowRoot?.querySelector<HTMLButtonElement>("button.continue");
+    button?.click();
+    await flush();
+
+    expect(isAutoSelectDisabled()).toBe(false);
+
+    controller.destroy();
   });
 });

@@ -1,3 +1,8 @@
+import {
+  disableAutoSelect,
+  enableAutoSelect,
+  isAutoSelectDisabled,
+} from "./auto-select.js";
 import { SilentLoginError, isSilentLoginError } from "./errors.js";
 import { checkSilentSession, silentLogin } from "./silent-login.js";
 import type {
@@ -34,6 +39,12 @@ export interface OneTapOptions extends SilentLoginOptions {
   target?: HTMLElement | string;
   /** Show the dismiss button, defaults to true. */
   dismissible?: boolean;
+  /** Automatically sign in after autoSelectDelayMs if the card is not dismissed. */
+  autoSelect?: boolean;
+  /** Delay before automatic sign-in, defaults to 5000ms. */
+  autoSelectDelayMs?: number;
+  /** Cookie domain for the auto-select disabled state, for example ".pilab.hu". */
+  stateCookieDomain?: string;
 }
 
 export interface OneTapController {
@@ -302,6 +313,15 @@ export function mountOneTap(options: OneTapOptions): OneTapController {
   let busy = false;
   let refreshing = false;
   let currentUser: SilentLoginUser | undefined;
+  const autoSelectEnabled = options.autoSelect === true && !isAutoSelectDisabled();
+  let autoSelectTimer: ReturnType<typeof setTimeout> | undefined;
+
+  const clearAutoSelectTimer = () => {
+    if (autoSelectTimer !== undefined) {
+      clearTimeout(autoSelectTimer);
+      autoSelectTimer = undefined;
+    }
+  };
 
   const hide = () => {
     host.style.display = "none";
@@ -334,6 +354,7 @@ export function mountOneTap(options: OneTapOptions): OneTapController {
   };
 
   const handleError = (error: unknown, forClick: boolean) => {
+    clearAutoSelectTimer();
     if (destroyed || controller.signal.aborted) {
       return;
     }
@@ -379,11 +400,14 @@ export function mountOneTap(options: OneTapOptions): OneTapController {
       }
       if (result.authenticated) {
         renderUser(result.user);
+        scheduleAutoSelect();
       } else {
+        clearAutoSelectTimer();
         hide();
         options.onLoginRequired?.();
       }
     } catch (error) {
+      clearAutoSelectTimer();
       handleError(error, false);
     } finally {
       refreshing = false;
@@ -394,6 +418,7 @@ export function mountOneTap(options: OneTapOptions): OneTapController {
     if (busy || destroyed) {
       return;
     }
+    clearAutoSelectTimer();
     busy = true;
     clearError();
     continueButton.disabled = true;
@@ -404,6 +429,7 @@ export function mountOneTap(options: OneTapOptions): OneTapController {
       if (destroyed) {
         return;
       }
+      enableAutoSelect({ domain: options.stateCookieDomain });
       await options.onLogin(result);
       if (!destroyed) {
         hide();
@@ -422,10 +448,35 @@ export function mountOneTap(options: OneTapOptions): OneTapController {
     }
   };
 
+  function scheduleAutoSelect(): void {
+    if (
+      !autoSelectEnabled ||
+      autoSelectTimer !== undefined ||
+      destroyed ||
+      busy ||
+      isAutoSelectDisabled()
+    ) {
+      return;
+    }
+    autoSelectTimer = setTimeout(() => {
+      autoSelectTimer = undefined;
+      if (!destroyed && !busy && host.style.display !== "none") {
+        void login();
+      }
+    }, Math.max(0, options.autoSelectDelayMs ?? 5_000));
+  }
+
   continueButton.addEventListener("click", () => {
     void login();
   });
   closeButton.addEventListener("click", () => {
+    if (busy) {
+      return;
+    }
+    clearAutoSelectTimer();
+    if (autoSelectEnabled) {
+      disableAutoSelect({ domain: options.stateCookieDomain });
+    }
     hide();
     options.onDismiss?.();
   });
@@ -437,6 +488,7 @@ export function mountOneTap(options: OneTapOptions): OneTapController {
     refresh,
     destroy: () => {
       destroyed = true;
+      clearAutoSelectTimer();
       options.signal?.removeEventListener("abort", onExternalAbort);
       controller.abort();
       host.remove();
