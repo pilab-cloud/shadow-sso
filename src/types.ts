@@ -48,6 +48,19 @@ export interface SilentLoginOptions {
 export interface SilentLoginSuccess {
   code: string;
   state: string;
+  user?: SilentLoginUser;
+}
+
+export interface SilentLoginUser {
+  id: string;
+  email?: string;
+  name?: string;
+}
+
+export interface SilentSessionCheckResult {
+  authenticated: boolean;
+  user?: SilentLoginUser;
+  state?: string;
 }
 
 export interface SilentAuthorizeUrl {
@@ -69,6 +82,8 @@ export interface SilentResultMessage {
   type: "sso-silent-result";
   state?: string;
   code?: string;
+  authenticated?: boolean;
+  user?: SilentLoginUser;
   error?: string;
   error_description?: string;
 }

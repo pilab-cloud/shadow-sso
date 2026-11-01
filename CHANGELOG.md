@@ -1,5 +1,13 @@
 # Changelog
 
+## 0.2.0
+
+- Added `mountOneTap()` / `mountOneClick()`: a Google One Tap-style corner card
+  with Shadow DOM isolation, account avatar/initials, themes and placements.
+- Added `checkSilentSession()`: session/user check without issuing a code.
+- Added `mode=session` support to the silent-authorize flow.
+- Silent login results now include optional user info (`id`, `email`, `name`).
+
 ## 0.1.0
 
 Initial public release.

@@ -12,6 +12,7 @@ const CRITICAL_PARAMS = new Set([
   "parent_origin",
   "code_challenge",
   "code_challenge_method",
+  "mode",
 ]);
 
 function parseAbsoluteUrl(raw: string, label: string): URL {
@@ -45,7 +46,10 @@ function normalizeParentOrigin(raw: string): string {
  * Builds the silent-authorize iframe URL. Exposed for advanced integrations and
  * tests; most callers should use silentLogin().
  */
-export function buildSilentAuthorizeUrl(options: SilentLoginOptions): SilentAuthorizeUrl {
+export function buildSilentAuthorizeUrl(
+  options: SilentLoginOptions,
+  mode?: "session",
+): SilentAuthorizeUrl {
   if (!options.clientId) {
     throw new SilentLoginError("invalid_config", "clientId is required.");
   }
@@ -81,6 +85,9 @@ export function buildSilentAuthorizeUrl(options: SilentLoginOptions): SilentAuth
   if (options.codeChallenge) {
     params.set("code_challenge", options.codeChallenge);
     params.set("code_challenge_method", options.codeChallengeMethod ?? "S256");
+  }
+  if (mode) {
+    params.set("mode", mode);
   }
   for (const [key, value] of Object.entries(options.extraParams ?? {})) {
     if (!CRITICAL_PARAMS.has(key)) {

@@ -1,7 +1,7 @@
 {
   "name": "@pilab/shadow-sso",
-  "version": "0.1.0",
-  "description": "Official JavaScript/TypeScript helper for Shadow SSO. Includes iframe silent login, CSP/X-Frame-Options preflight, PKCE helpers and typed errors.",
+  "version": "0.2.0",
+  "description": "Official JavaScript/TypeScript helper for Shadow SSO. Includes a Google One Tap-style login card, iframe silent login, CSP/X-Frame-Options preflight, PKCE helpers and typed errors.",
   "license": "MIT",
   "author": "Progressive Innovation LAB <gyula@pilab.hu> (https://pilab.hu)",
   "contributors": [
@@ -58,7 +58,9 @@
     "authentication",
     "single-sign-on",
     "typescript",
-    "shadow-sso"
+    "shadow-sso",
+    "one-tap",
+    "google-one-tap"
   ],
   "devDependencies": {
     "jsdom": "27.3.0",

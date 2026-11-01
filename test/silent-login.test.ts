@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { silentLogin } from "../src/index.js";
+import { checkSilentSession, silentLogin } from "../src/index.js";
 
 const baseOptions = {
   issuer: "https://sso.example.com",
@@ -98,5 +98,45 @@ describe("silentLogin", () => {
         redirectUri: "myapp://callback",
       }),
     ).rejects.toMatchObject({ code: "invalid_config" });
+  });
+});
+
+describe("checkSilentSession", () => {
+  it("resolves with the authenticated user and no code", async () => {
+    const promise = checkSilentSession(baseOptions);
+
+    dispatchResult({
+      type: "sso-silent-result",
+      state: "state-1",
+      authenticated: true,
+      user: {
+        id: "user-1",
+        email: "user@example.com",
+        name: "Test User",
+      },
+    });
+
+    await expect(promise).resolves.toEqual({
+      authenticated: true,
+      state: "state-1",
+      user: {
+        id: "user-1",
+        email: "user@example.com",
+        name: "Test User",
+      },
+    });
+    expect(document.querySelector("iframe[data-sso-silent]")).toBeNull();
+  });
+
+  it("rejects with login_required when there is no session", async () => {
+    const promise = checkSilentSession(baseOptions);
+
+    dispatchResult({
+      type: "sso-silent-result",
+      state: "state-1",
+      error: "login_required",
+    });
+
+    await expect(promise).rejects.toMatchObject({ code: "login_required" });
   });
 });

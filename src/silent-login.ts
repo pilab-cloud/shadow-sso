@@ -10,10 +10,16 @@ import type {
   SilentLoginOptions,
   SilentLoginSuccess,
   SilentResultMessage,
+  SilentSessionCheckResult,
 } from "./types.js";
 
 const DEFAULT_TIMEOUT_MS = 10_000;
 const MESSAGE_TYPE = "sso-silent-result";
+
+interface SilentRequestResult {
+  message: SilentResultMessage;
+  state: string;
+}
 
 function isSilentResultMessage(value: unknown): value is SilentResultMessage {
   if (typeof value !== "object" || value === null) {
@@ -22,14 +28,10 @@ function isSilentResultMessage(value: unknown): value is SilentResultMessage {
   return (value as { type?: unknown }).type === MESSAGE_TYPE;
 }
 
-/**
- * Performs iframe-based silent login.
- *
- * Resolves with an authorization code when the user already has a valid SSO
- * session. Rejects with a SilentLoginError for login_required,
- * consent_required, origin_not_allowed, timeout, and related failures.
- */
-export async function silentLogin(options: SilentLoginOptions): Promise<SilentLoginSuccess> {
+async function runSilentRequest(
+  options: SilentLoginOptions,
+  mode?: "session",
+): Promise<SilentRequestResult> {
   if (typeof window === "undefined" || typeof document === "undefined") {
     throw new SilentLoginError("not_browser", "silentLogin requires a browser environment.");
   }
@@ -37,13 +39,14 @@ export async function silentLogin(options: SilentLoginOptions): Promise<SilentLo
     throw new SilentLoginError("aborted", "Silent login was aborted.");
   }
 
-  const { url, state, origin, parentOrigin } = buildSilentAuthorizeUrl(options);
+  const { url, state, origin, parentOrigin } = buildSilentAuthorizeUrl(options, mode);
   if (window.location.origin && parentOrigin !== window.location.origin) {
     throw new SilentLoginError(
       "invalid_config",
       "parentOrigin must match window.location.origin in the browser.",
     );
   }
+
   const timeoutMs = options.timeoutMs ?? DEFAULT_TIMEOUT_MS;
   if (!Number.isFinite(timeoutMs) || timeoutMs <= 0) {
     throw new SilentLoginError("invalid_config", "timeoutMs must be a positive number.");
@@ -53,7 +56,7 @@ export async function silentLogin(options: SilentLoginOptions): Promise<SilentLo
     await runPreflight(url, origin, parentOrigin, options.signal);
   }
 
-  return await new Promise<SilentLoginSuccess>((resolve, reject) => {
+  return await new Promise<SilentRequestResult>((resolve, reject) => {
     let settled = false;
     let iframe: HTMLIFrameElement | null = null;
     let timer: ReturnType<typeof setTimeout> | undefined;
@@ -110,13 +113,7 @@ export async function silentLogin(options: SilentLoginOptions): Promise<SilentLo
         return;
       }
 
-      const code = message.code;
-      if (!code) {
-        fail("server_error", "Silent login returned no authorization code.", state);
-        return;
-      }
-
-      finish(() => resolve({ code, state }));
+      finish(() => resolve({ message, state }));
     };
 
     const onAbort = () => fail("aborted", "Silent login was aborted.");
@@ -148,4 +145,39 @@ export async function silentLogin(options: SilentLoginOptions): Promise<SilentLo
     iframe.src = url;
     (document.body ?? document.documentElement).appendChild(iframe);
   });
+}
+
+/**
+ * Performs iframe-based silent login.
+ *
+ * Resolves with an authorization code when the user already has a valid SSO
+ * session. Rejects with a SilentLoginError for login_required,
+ * consent_required, origin_not_allowed, timeout, and related failures.
+ */
+export async function silentLogin(options: SilentLoginOptions): Promise<SilentLoginSuccess> {
+  const { message, state } = await runSilentRequest(options);
+  const code = message.code;
+  if (!code) {
+    throw new SilentLoginError(
+      "server_error",
+      "Silent login returned no authorization code.",
+      state,
+    );
+  }
+  return { code, state, user: message.user };
+}
+
+/**
+ * Checks whether the browser has an active SSO session without issuing an
+ * authorization code. Used by the one-tap widget.
+ */
+export async function checkSilentSession(
+  options: SilentLoginOptions,
+): Promise<SilentSessionCheckResult> {
+  const { message, state } = await runSilentRequest(options, "session");
+  return {
+    authenticated: message.authenticated ?? Boolean(message.user),
+    user: message.user,
+    state,
+  };
 }

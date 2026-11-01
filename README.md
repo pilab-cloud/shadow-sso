@@ -17,6 +17,7 @@ declarations.
 ## Features
 
 - Umbrella package for Shadow SSO JavaScript/TypeScript helpers
+- Google One Tap-style corner card (`mountOneTap`)
 - Hidden iframe silent authentication (`prompt=none` semantics)
 - Strict `event.origin` and `state` validation
 - `postMessage` target derived from the registered redirect URI origin
@@ -89,21 +90,91 @@ try {
 }
 ```
 
+## One-tap corner login
+
+`mountOneTap()` renders a Google One Tap-style card in a page corner. It checks
+the SSO session once, shows the signed-in account when a session exists, and
+only requests a fresh authorization code when the user clicks **Continue**.
+
+```ts
+import { mountOneTap } from "@pilab/shadow-sso";
+
+const controller = mountOneTap({
+  issuer: "https://sso.pilab.hu",
+  clientId: "my-app",
+  redirectUri: "https://app.pilab.hu/auth/callback",
+  appName: "My App",
+  position: "top-right",
+  onLogin: async ({ code, state }) => {
+    // Exchange the code at /oauth2/token (or send it to your BFF).
+    await fetch("/auth/sso/callback", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ code, state }),
+    });
+  },
+  onLoginRequired: () => {
+    // Optional: show the site's normal login button.
+  },
+});
+
+// Later:
+// controller.refresh();
+// controller.destroy();
+```
+
+The card is rendered inside a Shadow DOM, so site CSS cannot leak into it and
+the widget cannot style the host page. It is hidden when there is no SSO
+session, when the client requires consent, or when the frame policy blocks it.
+
+One-tap options extend `SilentLoginOptions` with:
+
+| Option | Description |
+| --- | --- |
+| `onLogin` | Required; called with `{ code, state, user }` after a click |
+| `onLoginRequired` | No active SSO session |
+| `onConsentRequired` | Logged in, but interactive consent is required |
+| `onError` | Network, frame-policy or server failure |
+| `onDismiss` | User closed the card |
+| `position` | `top-right` (default), `top-left`, `bottom-right`, `bottom-left` |
+| `theme` | `auto` (default), `light`, `dark` |
+| `appName` | Shown as “Sign in to …” |
+| `buttonText` | Defaults to `Continue as {name}` |
+| `zIndex` | Defaults to `2147483000` |
+| `target` | Mount element or selector; defaults to `document.body` |
+| `dismissible` | Defaults to `true` |
+
+The initial check uses `mode=session` and does **not** create an authorization
+code. The code is generated only when the user clicks Continue.
+
 ## API
 
 ### `silentLogin(options): Promise<SilentLoginSuccess>`
 
 Builds the silent-authorize URL, runs the frame-policy preflight (unless
 disabled), inserts the hidden iframe, validates the response, and resolves with
-`{ code, state }`.
+`{ code, state, user? }`.
 
-### `buildSilentAuthorizeUrl(options): SilentAuthorizeUrl`
+### `checkSilentSession(options): Promise<SilentSessionCheckResult>`
+
+Checks whether the browser has an active SSO session **without issuing an
+authorization code**. Resolves with `{ authenticated: true, user?, state }` or
+rejects with `SilentLoginError` (`login_required`, `consent_required`, …).
+
+### `mountOneTap(options): OneTapController`
+
+Mounts the corner card. Returns `{ refresh, destroy }`.
+
+### `buildSilentAuthorizeUrl(options, mode?): SilentAuthorizeUrl`
 
 Builds the iframe URL without touching the DOM. Useful for advanced
 integrations and tests.
 
 ```ts
 const { url, state, origin, parentOrigin } = buildSilentAuthorizeUrl(options);
+
+// Session check URL (no authorization code):
+const { url: sessionUrl } = buildSilentAuthorizeUrl(options, "session");
 ```
 
 ### `preflightSilentAuthorize(options): Promise<void>`
