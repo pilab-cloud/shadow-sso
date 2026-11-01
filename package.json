@@ -1,8 +1,15 @@
 {
   "name": "@pilab/shadow-sso-silent-login",
   "version": "0.1.0",
-  "description": "Iframe-based silent login for Shadow SSO",
+  "description": "Iframe-based silent login for Shadow SSO with CSP/X-Frame-Options preflight, PKCE helpers and typed errors.",
   "license": "MIT",
+  "author": "Progressive Innovation LAB <gyula@pilab.hu> (https://pilab.hu)",
+  "contributors": [
+    "Paal Gyula <gyula@pilab.hu>"
+  ],
+  "maintainers": [
+    "Paal Gyula <gyula@pilab.hu>"
+  ],
   "type": "module",
   "packageManager": "pnpm@10.19.0",
   "repository": {
@@ -24,25 +31,33 @@
       "types": "./dist/index.d.ts",
       "import": "./dist/index.mjs",
       "require": "./dist/index.cjs"
-    }
+    },
+    "./package.json": "./package.json"
   },
   "files": [
     "dist",
-    "README.md"
+    "README.md",
+    "CHANGELOG.md",
+    "LICENSE"
   ],
   "sideEffects": false,
   "scripts": {
     "build": "tsup",
     "dev": "tsup --watch",
     "test": "vitest run",
-    "typecheck": "tsc --noEmit"
+    "typecheck": "tsc --noEmit",
+    "prepublishOnly": "pnpm test && pnpm build",
+    "pack": "pnpm build && npm pack"
   },
   "keywords": [
     "sso",
     "oidc",
     "silent-login",
     "iframe",
-    "pkce"
+    "pkce",
+    "authentication",
+    "single-sign-on",
+    "typescript"
   ],
   "devDependencies": {
     "jsdom": "27.3.0",
