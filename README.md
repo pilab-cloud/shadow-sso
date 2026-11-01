@@ -360,6 +360,10 @@ Allow the SSO origin in the parent page's CSP:
 The SDK creates a zero-size off-screen iframe so browsers still load and
 execute it.
 
+The one-tap card is rendered in a Shadow DOM. Modern browsers use a constructed
+stylesheet (`adoptedStyleSheets`); older browsers fall back to a `<style>`
+element, which may require `style-src 'unsafe-inline'` in a strict CSP.
+
 ## PKCE and token exchange
 
 Use `generatePkcePair()` and keep the verifier:

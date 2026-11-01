@@ -209,6 +209,22 @@ const STYLES = `
   .error.visible { display: block; }
 `;
 
+function applyShadowStyles(shadow: ShadowRoot): void {
+  if (typeof CSSStyleSheet !== "undefined" && "adoptedStyleSheets" in shadow) {
+    try {
+      const sheet = new CSSStyleSheet();
+      sheet.replaceSync(STYLES);
+      shadow.adoptedStyleSheets = [...shadow.adoptedStyleSheets, sheet];
+      return;
+    } catch {
+      // Fall back to a style element for older browsers.
+    }
+  }
+  const style = document.createElement("style");
+  style.textContent = STYLES;
+  shadow.prepend(style);
+}
+
 function initialsFor(user?: SilentLoginUser): string {
   const source = user?.name?.trim() || user?.email?.trim() || "?";
   const parts = source.split(/\s+/).filter(Boolean);
@@ -271,7 +287,7 @@ export function mountOneTap(options: OneTapOptions): OneTapController {
   Object.assign(host.style, positionStyles(options.position ?? "top-right"));
 
   const shadow = host.attachShadow({ mode: "open" });
-  shadow.innerHTML = `<style>${STYLES}</style>
+  shadow.innerHTML = `
     <div class="card" role="dialog" aria-label="Sign in with Shadow SSO" data-theme="auto">
       <div class="header">
         <span class="brand"></span>
@@ -290,6 +306,7 @@ export function mountOneTap(options: OneTapOptions): OneTapController {
       </button>
       <div class="error" role="alert"></div>
     </div>`;
+  applyShadowStyles(shadow);
 
   const card = shadow.querySelector<HTMLElement>(".card");
   const brand = shadow.querySelector<HTMLElement>(".brand");

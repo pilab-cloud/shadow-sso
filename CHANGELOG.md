@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.3.1
+
+- Use a constructed `CSSStyleSheet` (`adoptedStyleSheets`) for the one-tap
+  card, with a `<style>` fallback for older browsers, improving compatibility
+  with strict site CSPs.
+
 ## 0.3.0
 
 - Added automatic sign-in for the one-tap card (`autoSelect`, default 5s delay).
