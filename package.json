@@ -1,7 +1,7 @@
 {
-  "name": "@pilab/shadow-sso-silent-login",
+  "name": "@pilab/shadow-sso",
   "version": "0.1.0",
-  "description": "Iframe-based silent login for Shadow SSO with CSP/X-Frame-Options preflight, PKCE helpers and typed errors.",
+  "description": "Official JavaScript/TypeScript helper for Shadow SSO. Includes iframe silent login, CSP/X-Frame-Options preflight, PKCE helpers and typed errors.",
   "license": "MIT",
   "author": "Progressive Innovation LAB <gyula@pilab.hu> (https://pilab.hu)",
   "contributors": [
@@ -14,11 +14,11 @@
   "packageManager": "pnpm@10.19.0",
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/pilab-cloud/shadow-sso-silent-login.git"
+    "url": "git+https://github.com/pilab-cloud/shadow-sso.git"
   },
-  "homepage": "https://github.com/pilab-cloud/shadow-sso-silent-login#readme",
+  "homepage": "https://github.com/pilab-cloud/shadow-sso#readme",
   "bugs": {
-    "url": "https://github.com/pilab-cloud/shadow-sso-silent-login/issues"
+    "url": "https://github.com/pilab-cloud/shadow-sso/issues"
   },
   "publishConfig": {
     "access": "public"
@@ -57,7 +57,8 @@
     "pkce",
     "authentication",
     "single-sign-on",
-    "typescript"
+    "typescript",
+    "shadow-sso"
   ],
   "devDependencies": {
     "jsdom": "27.3.0",

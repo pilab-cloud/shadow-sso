@@ -51,7 +51,7 @@ Never commit an npm token to the repository.
 The package is published as:
 
 ```
-@pilab/shadow-sso-silent-login
+@pilab/shadow-sso
 ```
 
 The authenticated npm user must have publish rights to the `@pilab` scope.

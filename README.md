@@ -1,20 +1,22 @@
-# @pilab/shadow-sso-silent-login
+# @pilab/shadow-sso
 
-[![npm version](https://img.shields.io/npm/v/@pilab/shadow-sso-silent-login.svg)](https://www.npmjs.com/package/@pilab/shadow-sso-silent-login)
-[![CI](https://github.com/pilab-cloud/shadow-sso-silent-login/actions/workflows/ci.yml/badge.svg)](https://github.com/pilab-cloud/shadow-sso-silent-login/actions/workflows/ci.yml)
-[![license](https://img.shields.io/npm/l/@pilab/shadow-sso-silent-login.svg)](./LICENSE)
+[![npm version](https://img.shields.io/npm/v/@pilab/shadow-sso.svg)](https://www.npmjs.com/package/@pilab/shadow-sso)
+[![CI](https://github.com/pilab-cloud/shadow-sso/actions/workflows/ci.yml/badge.svg)](https://github.com/pilab-cloud/shadow-sso/actions/workflows/ci.yml)
+[![license](https://img.shields.io/npm/l/@pilab/shadow-sso.svg)](./LICENSE)
 
-Iframe-based silent login for **Shadow SSO**.
+Official JavaScript/TypeScript helper for **Shadow SSO**.
 
-The SDK loads the SSO `/oauth2/silent-authorize` endpoint in a hidden iframe,
-waits for a validated `postMessage`, and resolves with an authorization code or
-a typed `SilentLoginError`.
+This package is the home for Shadow SSO browser helpers. The first module is
+iframe-based silent login: it loads the SSO `/oauth2/silent-authorize` endpoint
+in a hidden iframe, waits for a validated `postMessage`, and resolves with an
+authorization code or a typed `SilentLoginError`.
 
 It has **no runtime dependencies** and ships ESM, CJS and TypeScript
 declarations.
 
 ## Features
 
+- Umbrella package for Shadow SSO JavaScript/TypeScript helpers
 - Hidden iframe silent authentication (`prompt=none` semantics)
 - Strict `event.origin` and `state` validation
 - `postMessage` target derived from the registered redirect URI origin
@@ -30,11 +32,11 @@ declarations.
 ## Install
 
 ```bash
-pnpm add @pilab/shadow-sso-silent-login
+pnpm add @pilab/shadow-sso
 # or
-npm install @pilab/shadow-sso-silent-login
+npm install @pilab/shadow-sso
 # or
-yarn add @pilab/shadow-sso-silent-login
+yarn add @pilab/shadow-sso
 ```
 
 ## Quick start
@@ -44,7 +46,7 @@ import {
   generatePkcePair,
   isSilentLoginError,
   silentLogin,
-} from "@pilab/shadow-sso-silent-login";
+} from "@pilab/shadow-sso";
 
 const pkce = await generatePkcePair();
 sessionStorage.setItem("sso_pkce_verifier", pkce.verifier);
@@ -305,7 +307,7 @@ pnpm publish --access public
 The package is published as a public scoped package:
 
 ```
-@pilab/shadow-sso-silent-login
+@pilab/shadow-sso
 ```
 
 ## License
