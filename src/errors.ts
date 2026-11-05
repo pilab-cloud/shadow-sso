@@ -11,6 +11,7 @@ const DEFAULT_DESCRIPTIONS: Record<string, string> = {
   server_error: "The SSO server could not complete silent login.",
   frame_blocked: "The SSO silent-login response cannot be framed by this origin.",
   timeout: "Silent login timed out.",
+  not_supported: "This browser does not support FedCM.",
   frame_error: "The silent login iframe failed to load.",
 };
 
