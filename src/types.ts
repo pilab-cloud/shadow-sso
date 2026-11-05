@@ -12,6 +12,7 @@ export type SilentLoginErrorCode =
   | "frame_error"
   | "aborted"
   | "not_browser"
+  | "not_supported"
   | "invalid_config";
 
 export interface SilentLoginOptions {

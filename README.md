@@ -1,8 +1,56 @@
+<div align="center">
+
 # @pilab/shadow-sso
 
-[![npm version](https://img.shields.io/npm/v/@pilab/shadow-sso.svg)](https://www.npmjs.com/package/@pilab/shadow-sso)
+**One Tap sign-in for your own identity provider, without the iframe.**
+
+[![npm version](https://img.shields.io/npm/v/@pilab/shadow-sso.svg?logo=npm&color=6d5efc)](https://www.npmjs.com/package/@pilab/shadow-sso)
+[![npm downloads](https://img.shields.io/npm/dm/@pilab/shadow-sso.svg?color=22d3ee)](https://www.npmjs.com/package/@pilab/shadow-sso)
 [![CI](https://github.com/pilab-cloud/shadow-sso/actions/workflows/ci.yml/badge.svg)](https://github.com/pilab-cloud/shadow-sso/actions/workflows/ci.yml)
+[![bundle size](https://img.shields.io/bundlephobia/minzip/@pilab/shadow-sso?label=minzipped)](https://bundlephobia.com/package/@pilab/shadow-sso)
+[![types](https://img.shields.io/npm/types/@pilab/shadow-sso.svg?logo=typescript&logoColor=white)](https://www.typescriptlang.org/)
+[![dependencies](https://img.shields.io/badge/dependencies-0-brightgreen.svg)](./package.json)
+[![FedCM](https://img.shields.io/badge/FedCM-ready-4285f4.svg?logo=googlechrome&logoColor=white)](https://developer.chrome.com/docs/identity/fedcm/overview)
+[![OpenID Connect](https://img.shields.io/badge/OpenID%20Connect-compatible-f78c40.svg?logo=openid&logoColor=white)](https://openid.net/connect/)
 [![license](https://img.shields.io/npm/l/@pilab/shadow-sso.svg)](./LICENSE)
+[![PRs welcome](https://img.shields.io/badge/PRs-welcome-ff69b4.svg)](https://github.com/pilab-cloud/shadow-sso/pulls)
+
+<img src="./docs/assets/fedcm-one-tap.png" alt="Shadow SSO FedCM One Tap: browser-native account chooser" width="860">
+
+<sub>Illustration of the browser-native FedCM prompt shown by `fedcmLogin()`.</sub>
+
+</div>
+
+## Why Shadow SSO One Tap?
+
+Google One Tap made sign-in a single click, but it ties you to Google's
+identity and, historically, to iframes and third-party cookies, which browsers
+are removing. Shadow SSO gives you the same experience against **your own**
+OpenID Connect provider, with two modern building blocks:
+
+- **FedCM** (`fedcmLogin`): the browser shows the account chooser. No iframe, no
+  third-party cookies, no popup that can be spoofed.
+- **Silent login + One Tap card** (`silentLogin`, `mountOneTap`): a hidden-iframe
+  fallback with strict origin checks for browsers without FedCM.
+
+### Advantages over other SSO options
+
+| | Shadow SSO | Google One Tap | Keycloak (keycloak-js) | Auth0 / Okta widgets |
+|---|:--:|:--:|:--:|:--:|
+| Self-hosted, you own the users | ✅ | ❌ Google accounts only | ✅ | ❌ SaaS |
+| FedCM (no iframe, no 3P cookies) | ✅ | ✅ | ❌ relies on an iframe session check | ⚠️ varies |
+| One Tap style prompt for your own IdP | ✅ | ✅ | ❌ | ⚠️ paid tiers / redirects |
+| Zero runtime dependencies | ✅ | n/a (remote script) | ❌ | ❌ |
+| Tiny, tree-shakeable ESM + CJS + types | ✅ | ❌ remote script | ⚠️ larger | ⚠️ larger |
+| Frame-policy preflight and typed errors | ✅ | ❌ | ❌ | ❌ |
+| No third-party script loaded at runtime | ✅ | ❌ | ✅ | ❌ |
+| Per-vendor pricing / user limits | none | none | none | ⚠️ yes |
+
+<sub>Comparison is a summary of default, documented behaviour at the time of
+writing; products evolve, so verify against their current docs.</sub>
+
+**In short:** the One Tap UX you know, on infrastructure you control, built for
+a world without third-party cookies.
 
 Official JavaScript/TypeScript helper for **Shadow SSO**.
 
@@ -30,6 +78,170 @@ declarations.
 - `AbortSignal` support and configurable timeout
 - ESM + CJS + `.d.ts`
 - Works with Shadow SSO's `/oauth2/silent-authorize` endpoint
+- FedCM sign-in (`fedcmLogin`): browser-mediated One Tap alternative with no
+  iframe or third-party cookies (requires Shadow SSO's `/fedcm/*` endpoints)
+
+## FedCM: usage in depth
+
+### How it works
+
+```
+ Browser                         Your app                    Shadow SSO
+    | fedcmLogin() ----------------------------------------> /fedcm/config.json
+    |<------------------------- native account chooser ----- /fedcm/accounts (cookie)
+    | user taps "Continue" -----------------------------------> /fedcm/assertion
+    |<------------------------- { token: <ID token> } -------- (nonce-bound)
+    | POST token + nonce -----------> verify (JWKS, aud, nonce) -> your session
+```
+
+1. Register your app as a client in Shadow SSO; its redirect URI origins define
+   which page origins may use FedCM.
+2. Call `fedcmLogin()` from that origin.
+3. Send the returned ID token and nonce to **your backend** and verify it there.
+
+### 1. Minimal
+
+```ts
+import { fedcmLogin, isFedCMSupported } from "@pilab/shadow-sso";
+
+if (isFedCMSupported()) {
+  const { token, nonce } = await fedcmLogin({
+    issuer: "https://sso.pilab.hu",
+    clientId: "my-app",
+  });
+  await fetch("/api/session", {
+    method: "POST",
+    headers: { "content-type": "application/json" },
+    body: JSON.stringify({ token, nonce }),
+  });
+}
+```
+
+### 2. Best practice: server-issued nonce and graceful fallback
+
+Let the server mint the nonce so a stolen token cannot be replayed, and fall
+back to the iframe card when FedCM is unavailable or declined.
+
+```ts
+import {
+  fedcmLogin,
+  isFedCMSupported,
+  isSilentLoginError,
+  mountOneTap,
+} from "@pilab/shadow-sso";
+
+const issuer = "https://sso.pilab.hu";
+const clientId = "my-app";
+
+async function signIn(): Promise<void> {
+  const { nonce } = await (await fetch("/api/nonce", { method: "POST" })).json();
+
+  if (isFedCMSupported()) {
+    try {
+      const { token } = await fedcmLogin({ issuer, clientId, nonce, context: "continue" });
+      await fetch("/api/session", { method: "POST", body: JSON.stringify({ token }) });
+      return location.reload();
+    } catch (error) {
+      if (!isSilentLoginError(error) || error.code === "aborted") return;
+      // login_required / server_error: fall through to the card.
+    }
+  }
+
+  mountOneTap({
+    issuer,
+    clientId,
+    redirectUri: `${location.origin}/auth/callback`,
+    appName: "My App",
+    onLogin: ({ code }) => (location.href = `/auth/callback?code=${code}`),
+  });
+}
+```
+
+### 3. Auto sign-in on page load (no UI when possible)
+
+```ts
+const controller = new AbortController();
+try {
+  const { token } = await fedcmLogin({
+    issuer, clientId, mediation: "silent", signal: controller.signal,
+  });
+  // returning user, signed in without any prompt
+} catch {
+  // not signed in: show your regular button
+}
+```
+
+### 4. React hook
+
+```tsx
+import { useEffect, useState } from "react";
+import { fedcmLogin, isFedCMSupported } from "@pilab/shadow-sso";
+
+export function useShadowSso(issuer: string, clientId: string) {
+  const [token, setToken] = useState<string | null>(null);
+  useEffect(() => {
+    if (!isFedCMSupported()) return;
+    const ac = new AbortController();
+    fedcmLogin({ issuer, clientId, mediation: "optional", signal: ac.signal })
+      .then((r) => setToken(r.token))
+      .catch(() => {});
+    return () => ac.abort();
+  }, [issuer, clientId]);
+  return token;
+}
+```
+
+### 5. Verify the ID token on the server (Node, `jose`)
+
+```ts
+import { createRemoteJWKSet, jwtVerify } from "jose";
+
+const jwks = createRemoteJWKSet(new URL("https://sso.pilab.hu/.well-known/jwks.json"));
+
+export async function verify(token: string, expectedNonce: string) {
+  const { payload } = await jwtVerify(token, jwks, {
+    issuer: "https://sso.pilab.hu",
+    audience: "my-app",
+  });
+  if (payload.nonce !== expectedNonce) throw new Error("nonce mismatch");
+  return payload; // sub, email, name ...
+}
+```
+
+### 6. Next.js route handler
+
+```ts
+// app/api/session/route.ts
+import { cookies } from "next/headers";
+import { verify } from "@/lib/verify";
+
+export async function POST(req: Request) {
+  const { token } = await req.json();
+  const jar = await cookies();
+  const nonce = jar.get("sso_nonce")?.value ?? "";
+  const claims = await verify(token, nonce);
+  jar.set("session", await createSession(claims.sub!), { httpOnly: true, secure: true, sameSite: "lax" });
+  return Response.json({ ok: true });
+}
+```
+
+### Error handling
+
+| Code | Meaning | Suggested action |
+|---|---|---|
+| `not_supported` | Browser has no FedCM | Use `mountOneTap` / `silentLogin` |
+| `login_required` | No account, dismissed, or SSO session missing | Show your normal login |
+| `aborted` | `AbortSignal` fired | Ignore |
+| `invalid_config` | Missing `issuer` / `clientId` | Fix configuration |
+| `server_error` | IdP rejected the request (for example the origin is not registered) | Check client registration |
+
+### Requirements
+
+- HTTPS (FedCM also works on `localhost`).
+- `/.well-known/web-identity` reachable at the registrable domain root of the
+  Shadow SSO issuer.
+- The page origin must match an origin of the client's registered redirect URIs.
+- Verify tokens server-side: never trust the token in the browser.
 
 ## Install
 

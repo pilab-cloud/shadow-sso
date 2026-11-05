@@ -12,6 +12,8 @@ export {
   isAutoSelectDisabled,
 } from "./auto-select.js";
 export type { AutoSelectStateOptions } from "./auto-select.js";
+export { fedcmLogin, isFedCMSupported } from "./fedcm.js";
+export type { FedCMLoginOptions, FedCMLoginResult } from "./fedcm.js";
 export { buildSilentAuthorizeUrl } from "./url.js";
 export { preflightSilentAuthorize } from "./preflight.js";
 export { generatePkcePair } from "./pkce.js";

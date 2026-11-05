@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.4.0
+
+- Added `fedcmLogin()` and `isFedCMSupported()` for FedCM sign-in against
+  Shadow SSO's `/fedcm/config.json`, plus the `not_supported` error code.
+
 ## 0.3.1
 
 - Use a constructed `CSSStyleSheet` (`adoptedStyleSheets`) for the one-tap
