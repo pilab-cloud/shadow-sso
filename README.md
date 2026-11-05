@@ -30,6 +30,27 @@ declarations.
 - `AbortSignal` support and configurable timeout
 - ESM + CJS + `.d.ts`
 - Works with Shadow SSO's `/oauth2/silent-authorize` endpoint
+- FedCM sign-in (`fedcmLogin`): browser-mediated One Tap alternative with no
+  iframe or third-party cookies (requires Shadow SSO's `/fedcm/*` endpoints)
+
+## FedCM
+
+```ts
+import { fedcmLogin, isFedCMSupported } from "@pilab/shadow-sso";
+
+if (isFedCMSupported()) {
+  const { token, nonce } = await fedcmLogin({
+    issuer: "https://sso.pilab.hu",
+    clientId: "my-app",
+    mediation: "optional", // "silent" for no UI
+  });
+  // Send `token` and `nonce` to your backend; verify the ID token against the
+  // SSO JWKS and check aud/nonce. Fall back to mountOneTap/silentLogin otherwise.
+}
+```
+
+The page origin must match a registered redirect URI origin of the client.
+Errors are `SilentLoginError`s: `not_supported`, `login_required`, `aborted`.
 
 ## Install
 
