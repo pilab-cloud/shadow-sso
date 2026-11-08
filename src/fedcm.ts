@@ -57,7 +57,9 @@ export async function fedcmLogin(options: FedCMLoginOptions): Promise<FedCMLogin
 
   const identity: Record<string, unknown> = {
     context: options.context,
-    providers: [{ configURL, clientId: options.clientId, nonce }],
+    // Chrome 145+ only reads the nonce from params; the top-level field is
+    // deprecated and no longer sent.
+    providers: [{ configURL, clientId: options.clientId, params: { nonce } }],
   };
   if (options.mode) {
     identity.mode = options.mode;

@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.5.1
+
+- Send the FedCM `nonce` inside the provider `params` object instead of the
+  deprecated top-level field, matching Chrome 145+ where the top-level nonce is
+  no longer read.
+
 ## 0.5.0
 
 - Added FedCM `mode: "active" | "passive"` support to `fedcmLogin()`, enabling

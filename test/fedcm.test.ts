@@ -28,7 +28,7 @@ describe("fedcmLogin", () => {
     expect(arg.identity.providers[0]!).toEqual({
       configURL: "https://sso.example.com/fedcm/config.json",
       clientId: "c1",
-      nonce: "n1",
+      params: { nonce: "n1" },
     });
     expect(arg.mediation).toBe("optional");
   });
