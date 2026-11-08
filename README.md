@@ -117,6 +117,34 @@ if (isFedCMSupported()) {
 }
 ```
 
+### 1b. Active mode (button flow)
+
+FedCM has two UX modes. Passive mode (the default) can run without direct user
+interaction and is used for One Tap/silent checks. Active mode must be started
+from a transient user gesture, such as clicking a "Sign in with SSO" button, and
+uses the browser's button-flow UI.
+
+```ts
+button.addEventListener("click", async () => {
+  const { token, nonce } = await fedcmLogin({
+    issuer: "https://sso.pilab.hu",
+    clientId: "my-app",
+    mode: "active",
+    context: "signin",
+  });
+  await fetch("/api/session", {
+    method: "POST",
+    headers: { "content-type": "application/json" },
+    body: JSON.stringify({ token, nonce }),
+  });
+});
+```
+
+`mode` is supported from Chrome 132. Older browsers ignore it and use passive
+mode. Shadow SSO supports both flows: the IdP config advertises
+`supports_use_other_account`, and its `login_url` serves an isolated login flow
+that closes the browser's FedCM dialog with `IdentityProvider.close()`.
+
 ### 2. Best practice: server-issued nonce and graceful fallback
 
 Let the server mint the nonce so a stolen token cannot be replayed, and fall
@@ -239,7 +267,8 @@ export async function POST(req: Request) {
 
 - HTTPS (FedCM also works on `localhost`).
 - `/.well-known/web-identity` reachable at the registrable domain root of the
-  Shadow SSO issuer.
+  Shadow SSO issuer. For `https://sso.pilab.hu`, that is
+  `https://pilab.hu/.well-known/web-identity` (not the issuer subdomain).
 - The page origin must match an origin of the client's registered redirect URIs.
 - Verify tokens server-side: never trust the token in the browser.
 

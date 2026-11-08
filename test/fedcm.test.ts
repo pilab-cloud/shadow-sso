@@ -33,6 +33,19 @@ describe("fedcmLogin", () => {
     expect(arg.mediation).toBe("optional");
   });
 
+  it("passes the active UI mode to navigator.credentials.get", async () => {
+    const get = vi.fn().mockResolvedValue({ token: "id.token" });
+    enable(get);
+    await fedcmLogin({
+      issuer: "https://sso.example.com",
+      clientId: "c1",
+      nonce: "n1",
+      mode: "active",
+    });
+    const arg = get.mock.calls[0]![0] as { identity: { mode?: string } };
+    expect(arg.identity.mode).toBe("active");
+  });
+
   it("maps NetworkError to login_required", async () => {
     enable(() => Promise.reject(Object.assign(new Error("x"), { name: "NetworkError" })));
     await expect(fedcmLogin({ issuer: "https://sso.example.com", clientId: "c" })).rejects.toMatchObject({

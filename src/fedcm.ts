@@ -13,6 +13,12 @@ export interface FedCMLoginOptions {
    * choose; "optional" (default) lets the browser decide; "required" always asks.
    */
   mediation?: "silent" | "optional" | "required";
+  /**
+   * FedCM UX mode. "active" requires a user gesture (for example a button
+   * click); "passive" (the browser default) can be invoked without direct
+   * user interaction. Supported from Chrome 132.
+   */
+  mode?: "active" | "passive";
   /** Wording of the browser prompt. */
   context?: "signin" | "signup" | "use" | "continue";
   /** Optional cancellation signal */
@@ -49,11 +55,16 @@ export async function fedcmLogin(options: FedCMLoginOptions): Promise<FedCMLogin
   const nonce = options.nonce ?? randomHex(16);
   const configURL = `${options.issuer.replace(/\/+$/, "")}/fedcm/config.json`;
 
+  const identity: Record<string, unknown> = {
+    context: options.context,
+    providers: [{ configURL, clientId: options.clientId, nonce }],
+  };
+  if (options.mode) {
+    identity.mode = options.mode;
+  }
+
   const request: Record<string, unknown> = {
-    identity: {
-      context: options.context,
-      providers: [{ configURL, clientId: options.clientId, nonce }],
-    },
+    identity,
     mediation: options.mediation ?? "optional",
     signal: options.signal,
   };

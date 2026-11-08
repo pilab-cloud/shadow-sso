@@ -1,5 +1,13 @@
 # Changelog
 
+## 0.5.0
+
+- Added FedCM `mode: "active" | "passive"` support to `fedcmLogin()`, enabling
+  the browser's active-mode button flow in addition to passive One Tap/silent
+  checks.
+- Documented the Shadow SSO active-mode `login_url` and isolated login/close
+  flow.
+
 ## 0.4.0
 
 - Added `fedcmLogin()` and `isFedCMSupported()` for FedCM sign-in against
