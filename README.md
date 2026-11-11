@@ -379,7 +379,7 @@ One-tap options extend `SilentLoginOptions` with:
 | `onError` | Network, frame-policy or server failure |
 | `onDismiss` | User closed the card |
 | `position` | `top-right` (default), `top-left`, `bottom-right`, `bottom-left` |
-| `theme` | `auto` (default), `light`, `dark` |
+| `theme` | `auto` (default; Pilab dark palette, light when the OS prefers it), `light`, `dark`. Override the accent with the `--sso-primary` CSS variable. |
 | `appName` | Shown as “Sign in to …” |
 | `buttonText` | Defaults to `Continue as {name}` |
 | `zIndex` | Defaults to `2147483000` |

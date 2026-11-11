@@ -1,5 +1,11 @@
 # Changelog
 
+## Unreleased
+
+- Restyled the One Tap card with the Pilab Look & Feel design: Lato, 4px
+  radius, dark palette by default (light when `prefers-color-scheme: light`),
+  square avatar, focus rings, and a `--sso-primary` CSS variable for the accent.
+
 ## 0.5.1
 
 - Send the FedCM `nonce` inside the provider `params` object instead of the

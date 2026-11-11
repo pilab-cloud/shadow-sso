@@ -27,7 +27,7 @@ export interface OneTapOptions extends SilentLoginOptions {
   onDismiss?: () => void;
   /** Corner placement, defaults to top-right. */
   position?: OneTapPosition;
-  /** Color theme, defaults to auto. */
+  /** Color theme. `dark` is the Pilab Look & Feel palette; `auto` follows the OS (dark by default). Defaults to auto. */
   theme?: OneTapTheme;
   /** Application name shown in the widget header. */
   appName?: string;
@@ -58,52 +58,59 @@ const DEFAULT_Z_INDEX = 2147483000;
 
 const STYLES = `
   :host {
-    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    font-family: Lato, "Helvetica Neue", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Arial, sans-serif;
   }
   *, *::before, *::after { box-sizing: border-box; }
+  /* Pilab Look & Feel tokens (dark). Hosts can override --sso-primary. */
   .card {
-    --bg: #ffffff;
-    --text: #202124;
-    --muted: #5f6368;
-    --border: #dadce0;
-    --accent: #1a73e8;
-    --accent-hover: #1765cc;
-    --accent-text: #ffffff;
-    --error-bg: #fce8e6;
-    --error-text: #c5221f;
+    --bg: #18181b;
+    --text: #f3f4f6;
+    --muted: #99a1af;
+    --border: rgba(255, 255, 255, 0.14);
+    --hover: rgba(255, 255, 255, 0.08);
+    --accent: var(--sso-primary, #54a2ff);
+    --accent-hover: color-mix(in srgb, var(--accent) 82%, black);
+    --accent-text: #0b0b0d;
+    --error-bg: rgba(248, 113, 113, 0.1);
+    --error-border: rgba(248, 113, 113, 0.3);
+    --error-text: #f87171;
     width: 360px;
     max-width: calc(100vw - 32px);
     background: var(--bg);
     color: var(--text);
     border: 1px solid var(--border);
-    border-radius: 12px;
-    box-shadow: 0 12px 40px rgba(0, 0, 0, 0.18);
+    border-radius: 4px;
+    box-shadow: 0 12px 40px rgba(0, 0, 0, 0.45);
     font-size: 14px;
     line-height: 1.4;
     overflow: hidden;
   }
-  .card[data-theme="dark"] {
-    --bg: #202124;
-    --text: #e8eaed;
-    --muted: #9aa0a6;
-    --border: #3c4043;
-    --accent: #8ab4f8;
-    --accent-hover: #aecbfa;
-    --accent-text: #202124;
-    --error-bg: #3c1f1e;
-    --error-text: #f28b82;
+  .card[data-theme="light"] {
+    --bg: #ffffff;
+    --text: #1a1a1f;
+    --muted: #5b6270;
+    --border: rgba(0, 0, 0, 0.14);
+    --hover: rgba(0, 0, 0, 0.06);
+    --accent: var(--sso-primary, #1d6fd6);
+    --accent-text: #ffffff;
+    --error-bg: #fdeaea;
+    --error-border: #f3b4b4;
+    --error-text: #b42323;
+    box-shadow: 0 12px 40px rgba(0, 0, 0, 0.18);
   }
-  @media (prefers-color-scheme: dark) {
+  @media (prefers-color-scheme: light) {
     .card[data-theme="auto"] {
-      --bg: #202124;
-      --text: #e8eaed;
-      --muted: #9aa0a6;
-      --border: #3c4043;
-      --accent: #8ab4f8;
-      --accent-hover: #aecbfa;
-      --accent-text: #202124;
-      --error-bg: #3c1f1e;
-      --error-text: #f28b82;
+      --bg: #ffffff;
+      --text: #1a1a1f;
+      --muted: #5b6270;
+      --border: rgba(0, 0, 0, 0.14);
+      --hover: rgba(0, 0, 0, 0.06);
+      --accent: var(--sso-primary, #1d6fd6);
+      --accent-text: #ffffff;
+      --error-bg: #fdeaea;
+      --error-border: #f3b4b4;
+      --error-text: #b42323;
+      box-shadow: 0 12px 40px rgba(0, 0, 0, 0.18);
     }
   }
   .header {
@@ -114,9 +121,10 @@ const STYLES = `
   }
   .brand {
     font-size: 12px;
-    font-weight: 600;
+    font-weight: 700;
     color: var(--muted);
-    letter-spacing: 0.01em;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
   }
   .close {
     appearance: none;
@@ -125,7 +133,7 @@ const STYLES = `
     color: var(--muted);
     width: 26px;
     height: 26px;
-    border-radius: 50%;
+    border-radius: 4px;
     cursor: pointer;
     font-size: 20px;
     line-height: 1;
@@ -133,7 +141,8 @@ const STYLES = `
     place-items: center;
     padding: 0;
   }
-  .close:hover { background: rgba(128, 128, 128, 0.15); }
+  .close:hover { background: var(--hover); color: var(--text); }
+  .close:focus-visible, .continue:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
   .account {
     display: flex;
     align-items: center;
@@ -144,19 +153,19 @@ const STYLES = `
     width: 44px;
     height: 44px;
     flex: 0 0 44px;
-    border-radius: 50%;
+    border-radius: 4px;
     display: grid;
     place-items: center;
-    color: #fff;
-    background: linear-gradient(135deg, #4285f4, #a142f4);
-    font-weight: 600;
+    color: var(--accent-text);
+    background: var(--accent);
+    font-weight: 700;
     font-size: 16px;
     user-select: none;
   }
   .identity { min-width: 0; }
   .name {
     font-size: 15px;
-    font-weight: 600;
+    font-weight: 700;
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
@@ -177,11 +186,11 @@ const STYLES = `
     margin: 0 14px 14px;
     padding: 10px 14px;
     border: 0;
-    border-radius: 8px;
+    border-radius: 4px;
     background: var(--accent);
     color: var(--accent-text);
     font: inherit;
-    font-weight: 600;
+    font-weight: 700;
     cursor: pointer;
   }
   .continue:hover { background: var(--accent-hover); }
@@ -197,11 +206,13 @@ const STYLES = `
   }
   .continue.loading .spinner { display: inline-block; }
   @keyframes sso-spin { to { transform: rotate(360deg); } }
+  @media (prefers-reduced-motion: reduce) { .spinner { animation-duration: 2.4s; } }
   .error {
     display: none;
     margin: 0 14px 14px;
     padding: 8px 10px;
-    border-radius: 8px;
+    border: 1px solid var(--error-border);
+    border-radius: 4px;
     background: var(--error-bg);
     color: var(--error-text);
     font-size: 12.5px;
